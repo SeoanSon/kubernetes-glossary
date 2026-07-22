@@ -348,6 +348,121 @@ kubectl describe pod my-pod  # 상세 상태 보기
 
 ---
 
+## 🧪 직접 실습해보기
+
+### Pod 생성 및 관리 실습
+
+```bash
+# 1. Nginx Pod 생성
+kubectl apply -f - <<EOF
+apiVersion: v1
+kind: Pod
+metadata:
+  name: core-concepts-demo
+  namespace: default
+  labels:
+    app: demo
+    tier: test
+spec:
+  containers:
+  - name: nginx
+    image: nginx:1.25
+    ports:
+    - containerPort: 80
+    resources:
+      requests:
+        memory: "32Mi"
+        cpu: "50m"
+      limits:
+        memory: "64Mi"
+        cpu: "100m"
+EOF
+
+# 2. Pod 확인
+kubectl get pods
+kubectl get pods -o wide
+kubectl describe pod core-concepts-demo
+
+# 3. Label로 Pod 찾기
+kubectl get pods -l app=demo
+kubectl get pods -l 'tier=test'
+
+# 4. Pod 로그 확인
+kubectl logs core-concepts-demo
+
+# 5. Pod 내부 접속
+kubectl exec -it core-concepts-demo -- bash
+# 또는 명령어 실행만
+kubectl exec core-concepts-demo -- curl localhost
+
+# 6. 포트 포워딩 (외부에서 접근)
+kubectl port-forward pod/core-concepts-demo 8080:80 &
+# curl http://localhost:8080
+
+# 7. Pod 삭제
+kubectl delete pod core-concepts-demo
+```
+
+**기대 결과:**
+```bash
+$ kubectl get pods -o wide
+NAME                  READY   STATUS    RESTARTS   AGE   NODE
+core-concepts-demo    1/1     Running   0          10s   aks-node-1
+
+$ kubectl describe pod core-concepts-demo
+Name:         core-concepts-demo
+Namespace:    default
+Status:       Running
+IP:           10.244.1.5
+...
+
+$ kubectl exec core-concepts-demo -- curl localhost
+<!DOCTYPE html>
+<html>
+<head>
+<title>Welcome to nginx!</title>
+```
+
+### Namespace 실습
+
+```bash
+# 1. Namespace 생성
+kubectl create namespace test-namespace
+
+# 2. 다른 Namespace에 Pod 생성
+kubectl apply -f - <<EOF
+apiVersion: v1
+kind: Pod
+metadata:
+  name: ns-demo
+  namespace: test-namespace
+spec:
+  containers:
+  - name: busybox
+    image: busybox:1.35
+    command: ['sleep', '3600']
+EOF
+
+# 3. Namespace별 Pod 확인
+kubectl get pods                          # default namespace
+kubectl get pods -n test-namespace        # test-namespace
+kubectl get pods -A                       # 모든 namespace
+
+# 4. 정리
+kubectl delete namespace test-namespace   # Pod도 함께 삭제
+```
+
+**기대 결과:**
+```bash
+$ kubectl get pods -A
+NAMESPACE              NAME                    READY   STATUS
+default                core-concepts-demo      1/1     Running
+test-namespace         ns-demo                 1/1     Running
+kube-system            coredns-558bd4d5c9...  1/1     Running
+```
+
+---
+
 ## 🎯 핵심 요점
 
 | 개념 | 핵심 포인트 |

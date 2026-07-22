@@ -439,7 +439,151 @@ spec:
 
 ---
 
-## 🎯 핵심 요점
+## 🧪 직접 실습해보기
+
+### Deployment 배포 및 업데이트 실습
+
+```bash
+# 1. Deployment 배포 (3개 Pod)
+kubectl apply -f - <<EOF
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: workload-demo
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: demo
+  template:
+    metadata:
+      labels:
+        app: demo
+    spec:
+      containers:
+      - name: nginx
+        image: nginx:1.25
+        ports:
+        - containerPort: 80
+        resources:
+          requests:
+            memory: "32Mi"
+            cpu: "50m"
+          limits:
+            memory: "64Mi"
+            cpu: "100m"
+EOF
+
+# 2. Deployment 상태 확인
+kubectl get deployments
+kubectl get replicasets
+kubectl get pods -l app=demo
+
+# 3. Pod 수 조정 (스케일 업/다운)
+kubectl scale deployment/workload-demo --replicas=5
+kubectl get pods -l app=demo                          # 5개로 증가
+kubectl scale deployment/workload-demo --replicas=2
+kubectl get pods -l app=demo                          # 2개로 감소
+
+# 4. 이미지 업데이트 (롤링 업데이트)
+kubectl set image deployment/workload-demo nginx=nginx:1.26
+
+# 5. 업데이트 진행 상황 확인
+kubectl rollout status deployment/workload-demo
+
+# 6. 롤아웃 히스토리 확인
+kubectl rollout history deployment/workload-demo
+
+# 7. 이전 버전으로 롤백
+kubectl rollout undo deployment/workload-demo
+
+# 8. 특정 리비전으로 롤백
+kubectl rollout undo deployment/workload-demo --to-revision=1
+
+# 9. Deployment 상세 정보
+kubectl describe deployment workload-demo
+
+# 10. Deployment 삭제
+kubectl delete deployment workload-demo
+```
+
+**기대 결과:**
+```bash
+$ kubectl get deployments
+NAME           READY   UP-TO-DATE   AVAILABLE   AGE
+workload-demo  3/3     3            3           30s
+
+$ kubectl get replicasets
+NAME                      DESIRED   CURRENT   READY   AGE
+workload-demo-abc123...   3         3         3       30s
+
+$ kubectl scale deployment/workload-demo --replicas=5
+deployment.apps/workload-demo scaled
+
+$ kubectl get pods -l app=demo
+NAME                           READY   STATUS    RESTARTS   AGE
+workload-demo-abc123-xyz1      1/1     Running   0          2m
+workload-demo-abc123-xyz2      1/1     Running   0          2m
+workload-demo-abc123-xyz3      1/1     Running   0          2m
+workload-demo-abc123-xyz4      1/1     Running   0          30s
+workload-demo-abc123-xyz5      1/1     Running   0          30s
+
+$ kubectl rollout status deployment/workload-demo
+Waiting for rollout to finish: 1 old replicas are pending termination...
+Waiting for rollout to finish: 1 old replicas are pending termination...
+deployment "workload-demo" successfully rolled out
+```
+
+### Job 실습
+
+```bash
+# 1. 간단한 Job 배포
+kubectl apply -f - <<EOF
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: hello-job
+spec:
+  completions: 1
+  parallelism: 1
+  template:
+    spec:
+      containers:
+      - name: hello
+        image: busybox:1.35
+        command: ['echo', 'Hello from Kubernetes Job!']
+      restartPolicy: Never
+EOF
+
+# 2. Job 상태 확인
+kubectl get jobs
+kubectl describe job hello-job
+
+# 3. Job Pod 로그 확인
+POD_NAME=$(kubectl get pods -l job-name=hello-job -o jsonpath='{.items[0].metadata.name}')
+kubectl logs $POD_NAME
+
+# 4. Job 완료 후 정리
+kubectl delete job hello-job
+```
+
+**기대 결과:**
+```bash
+$ kubectl get jobs
+NAME        COMPLETIONS   DURATION   AGE
+hello-job   1/1           3s         10s
+
+$ kubectl logs hello-job-xyz...
+Hello from Kubernetes Job!
+
+$ kubectl describe job hello-job
+...
+Successful Pods:  1
+Failed Pods:      0
+Warnings:         <none>
+```
+
+---
 
 | 워크로드 | 용도 | Pod 이름 | 네트워크 |
 |---------|------|---------|---------|
