@@ -7,8 +7,11 @@
 | # | 실습 | 관련 개념 | 난이도 | 소요 시간 |
 |---|------|---------|--------|---------|
 | 03 | [Liveness & Readiness Probe](03-liveness-readiness/README.md) | 워크로드 / HealthCheck | ⭐⭐ | 30-45분 |
+| 04 | [Kubernetes 네트워킹](04-networking/README.md) | Service, DNS, Ingress | ⭐⭐⭐ | 1-2시간 |
+| 05 | [Kubernetes 저장소](05-storage/README.md) | Volume, PV, PVC | ⭐⭐ | 1-1.5시간 |
+| 06 | [Kubernetes 설정 관리](06-configuration/README.md) | ConfigMap, Secret | ⭐ | 1시간 |
 
-> 더 많은 실습이 추가될 예정입니다.
+> 계속 실습이 추가될 예정입니다.
 
 ## 🚀 시작 전 준비
 

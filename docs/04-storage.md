@@ -129,6 +129,19 @@ spec:
 
 ---
 
+## 🧪 직접 실습해보기
+
+**클러스터에서 실제로 배포하고 테스트해보세요:**
+
+→ [**실습 05: Kubernetes 저장소**](../labs/05-storage/README.md)
+- ✅ emptyDir Volume으로 임시 저장소 사용
+- ✅ hostPath Volume으로 노드 디렉토리 마운트
+- ✅ PersistentVolume & PersistentVolumeClaim 생성
+- ✅ 데이터 영속성 확인
+- ✅ 실제 kubectl 명령어와 결과
+
+---
+
 ## StorageClass - 동적 프로비저닝
 
 **문제:** 관리자가 매번 PV를 만들어야 함!
@@ -178,6 +191,14 @@ spec:
 | **hostPath** | 노드 디렉토리 접근 | 노드 의존적 |
 | **PV + PVC** | 영구 저장소 | Pod 삭제 후에도 유지 |
 | **StorageClass** | 자동 프로비저닝 | 동적 할당 |
+
+---
+
+## 📚 다음 단계
+
+1. **실습하기**: [Lab 05 - Kubernetes 저장소](../labs/05-storage/README.md)
+2. **보안**: [Doc 05 - 보안 & RBAC](05-security-rbac.md)
+3. **전체 Labs**: [Labs 홈](../labs/README.md)
 
 ---
 

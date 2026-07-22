@@ -164,6 +164,18 @@ kubectl exec pod-name -- env | grep NGINX
 
 ---
 
+## 🧪 직접 실습해보기
+
+**클러스터에서 실제로 배포하고 테스트해보세요:**
+
+→ [**실습 04: Kubernetes 네트워킹**](../labs/04-networking/README.md)
+- ✅ ClusterIP Service 배포 및 내부 통신
+- ✅ NodePort Service로 외부 접근
+- ✅ DNS 서비스 발견 테스트
+- ✅ 실제 kubectl 명령어와 결과
+
+---
+
 ## Ingress - 외부 접근
 
 **Service는 포트 기반**인데, **HTTP/HTTPS 경로 기반**으로 라우팅하려면?
@@ -277,6 +289,14 @@ spec:
 | **Service (LoadBalancer)** | 클라우드 LB로 노출 |
 | **Ingress** | HTTP/HTTPS 경로 라우팅 |
 | **NetworkPolicy** | Pod 간 통신 제어 |
+
+---
+
+## 📚 다음 단계
+
+1. **실습하기**: [Lab 04 - Kubernetes 네트워킹](../labs/04-networking/README.md)
+2. **저장소**: [Doc 04 - Kubernetes 저장소](04-storage.md)
+3. **전체 Labs**: [Labs 홈](../labs/README.md)
 
 ---
 
