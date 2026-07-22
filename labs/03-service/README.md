@@ -168,19 +168,37 @@ aks-agentpool-36284107-vmss00000b   Ready    <none>   13h    v1.35.5   10.224.0.
 **가장 간단하고 모든 환경에서 작동:**
 
 ```bash
-# 1. Service로 port-forward 설정 (로컬 8080 → Service 80)
+# 0️⃣ 먼저 Deployment와 Service를 배포 (아직 안 했다면)
+kubectl apply -f deployment.yaml
+kubectl apply -f service-nodeport.yaml
+
+# 배포 확인
+kubectl get deployment web-server
+kubectl get svc web-server-nodeport
+
+# 1️⃣ Service로 port-forward 설정 (로컬 8080 → Service 80)
 kubectl port-forward service/web-server-nodeport 8080:80 &
 
-# 2. 로컬에서 접근
+# 2️⃣ 로컬에서 접근
 curl http://localhost:8080
 
-# 3. 백그라운드 작업 종료
+# 3️⃣ 백그라운드 작업 종료
 jobs
 kill %1
 ```
 
 **기대 결과:**
 ```bash
+$ kubectl apply -f deployment.yaml
+deployment.apps/web-server created
+
+$ kubectl apply -f service-nodeport.yaml
+service/web-server-nodeport created
+
+$ kubectl get svc web-server-nodeport
+NAME                 TYPE       CLUSTER-IP     EXTERNAL-IP   PORT(S)          AGE
+web-server-nodeport  NodePort   10.0.234.567   <none>        80:30080/TCP     5s
+
 $ kubectl port-forward service/web-server-nodeport 8080:80 &
 [1] 12345
 Forwarding from 127.0.0.1:8080 -> 80
@@ -198,16 +216,37 @@ $ curl http://localhost:8080
 **클러스터 내부의 다른 Pod에서 테스트:**
 
 ```bash
-# 1. 테스트용 Pod 실행
+# 0️⃣ 먼저 Deployment와 Service를 배포 (아직 안 했다면)
+kubectl apply -f deployment.yaml
+kubectl apply -f service-nodeport.yaml
+
+# 배포 확인
+kubectl get pods -l app=web-server
+kubectl get svc web-server-nodeport
+
+# 1️⃣ 테스트용 Pod 실행
 kubectl run test-curl --image=curlimages/curl -it --rm -- \
   curl http://web-server-nodeport:80
 
-# 2. 또는 기존 Pod에서 직접 실행
-kubectl exec -it web-server-abc123-xyz1 -- curl http://web-server-nodeport:80
+# 2️⃣ 또는 기존 Pod에서 직접 실행
+POD_NAME=$(kubectl get pods -l app=web-server -o jsonpath='{.items[0].metadata.name}')
+kubectl exec -it $POD_NAME -- curl http://web-server-nodeport:80
 ```
 
 **기대 결과:**
 ```bash
+$ kubectl apply -f deployment.yaml
+deployment.apps/web-server created
+
+$ kubectl apply -f service-nodeport.yaml
+service/web-server-nodeport created
+
+$ kubectl get pods -l app=web-server
+NAME                          READY   STATUS    RESTARTS   AGE
+web-server-abc123-xyz1        1/1     Running   0          10s
+web-server-abc123-xyz2        1/1     Running   0          10s
+web-server-abc123-xyz3        1/1     Running   0          10s
+
 $ kubectl run test-curl --image=curlimages/curl -it --rm -- \
   curl http://web-server-nodeport:80
 <!DOCTYPE html>
@@ -223,22 +262,65 @@ pod "test-curl" deleted
 **특정 AKS 노드에 SSH로 접근해서 테스트:**
 
 ```bash
-# 1. Azure에서 노드에 접근하는 방법 설정
+# 0️⃣ 먼저 Deployment와 Service를 배포 (아직 안 했다면)
+kubectl apply -f deployment.yaml
+kubectl apply -f service-nodeport.yaml
+
+# 배포 확인
+kubectl get svc web-server-nodeport
+
+# 1️⃣ Azure에서 노드에 접근하는 방법 설정
 # (별도의 VM이나 Bastion 필요 - 보안상 제한)
 
-# 2. kubectl debug를 사용한 노드 디버깅 Pod
+# 2️⃣ kubectl debug를 사용한 노드 디버깅 Pod
 kubectl debug node/aks-agentpool-36284107-vmss00000a -it --image=ubuntu
 
-# 3. 디버그 Pod 내부에서
+# 3️⃣ 디버그 Pod 내부에서 (NodePort 30080으로 접근)
 curl http://10.224.0.7:30080
+```
+
+**기대 결과:**
+```bash
+$ kubectl apply -f deployment.yaml
+deployment.apps/web-server created
+
+$ kubectl apply -f service-nodeport.yaml
+service/web-server-nodeport created
+
+$ kubectl get svc web-server-nodeport
+NAME                 TYPE       CLUSTER-IP     EXTERNAL-IP   PORT(S)          AGE
+web-server-nodeport  NodePort   10.0.234.567   <none>        80:30080/TCP     5s
+
+$ kubectl debug node/aks-agentpool-36284107-vmss00000a -it --image=ubuntu
+Creating debugging pod node-debugger-aks-agentpool-... in namespace default
+...
+/root# curl http://10.224.0.7:30080
+<!DOCTYPE html>
+<html>
+<head>
+<title>Welcome to nginx!</title>
 ```
 
 ### 방법 4️⃣: Azure Load Balancer 활용
 
 **AKS에서 NodePort를 외부에 노출하려면 (프로덕션):**
 
+```bash
+# 0️⃣ 먼저 Deployment를 배포
+kubectl apply -f deployment.yaml
+
+# 1️⃣ LoadBalancer Service 사용 (권장)
+kubectl apply -f service-loadbalancer.yaml
+
+# 2️⃣ 외부 IP 확인 (Azure Load Balancer 생성됨)
+kubectl get svc web-server-loadbalancer --watch
+
+# 3️⃣ 외부에서 접근
+curl http://<EXTERNAL-IP>
+```
+
+**기대 결과:**
 ```yaml
-# LoadBalancer Service 사용 (권장)
 # 또는 Ingress Controller 사용
 ```
 
