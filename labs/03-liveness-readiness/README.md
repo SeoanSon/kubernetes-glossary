@@ -137,12 +137,18 @@ kubectl describe pod liveness-demo
 ### 기대 결과
 
 ```
-NAME            READY   STATUS    RESTARTS   AGE
-liveness-demo   1/1     Running   0          10s    ← 정상 시작
-liveness-demo   1/1     Running   0          30s    ← 30초 후 고의 실패 시작
-liveness-demo   0/1     Running   1          45s    ← RESTARTS 카운트 증가!
-liveness-demo   1/1     Running   1          50s    ← 재시작 후 다시 Running
+# 사전: kubectl get pod liveness-demo -w
+
+NAME            READY   STATUS             RESTARTS   AGE
+liveness-demo   1/1     Running            0          10s    ← 정상 시작
+liveness-demo   0/1     Running            1          45s    ← 첫 번째 재시작 (RESTARTS=1)
+liveness-demo   1/1     Running            1          50s    ← 재시작 후 Running
+liveness-demo   0/1     Running            2          80s    ← 30초 후 또 실패, 재시작 반복
+liveness-demo   0/1     CrashLoopBackOff   2          95s    ← 반복 실패 시 Kubernetes가 백오프 적용
 ```
+
+> **팅**: `CrashLoopBackOff`는 오류가 아닙니다!  
+> 재시작을 반복할 경우 Kubernetes가 **지수 백오프** (10s, 20s, 40s...))를 적용하는 정상 동작입니다.
 
 ### `kubectl describe` 출력 확인
 
@@ -153,24 +159,38 @@ kubectl describe pod liveness-demo
 기대 출력:
 ```
 Events:
-  Type     Reason     Age   From               Message
-  ----     ------     ----  ----               -------
-  Normal   Pulled     45s   kubelet            Successfully pulled image
-  Normal   Created    45s   kubelet            Created container liveness-demo
-  Normal   Started    45s   kubelet            Started container liveness-demo
-  Warning  Unhealthy  15s   kubelet            Liveness probe failed: command
-                                               "cat /tmp/healthy" returned non-zero: 1
-  Normal   Killing    12s   kubelet            Container liveness-demo failed liveness
-                                               probe, will be restarted
-  Normal   Pulled     10s   kubelet            Successfully pulled image (재시작!)
+  Type     Reason     Age    From               Message
+  ----     ------     ----   ----               -------
+  Normal   Scheduled  2m     default-scheduler  Successfully assigned default/liveness-demo
+  Normal   Pulling    2m     kubelet            Pulling image "busybox:1.35"
+  Normal   Pulled     2m     kubelet            Successfully pulled image
+  Normal   Created    2m     kubelet            Container created
+  Normal   Started    2m     kubelet            Container started
+  Warning  Unhealthy  94s    kubelet            Liveness probe failed: cat: can't open
+                                                '/tmp/healthy': No such file or directory
+  Normal   Killing    94s    kubelet            Container liveness-demo failed liveness
+                                                probe, will be restarted
+  Normal   Pulled     90s    kubelet            Container image already present, restarting
+  Normal   Created    90s    kubelet            Container created (RESTARTS=1)
+  Normal   Started    90s    kubelet            Container started
+  Warning  Unhealthy  55s    kubelet            Liveness probe failed: cat: can't open
+                                                '/tmp/healthy': No such file or directory
+  Normal   Killing    55s    kubelet            Container liveness-demo failed liveness
+                                                probe, will be restarted
+  Warning  BackOff    10s    kubelet            Back-off restarting failed container
+                                                liveness-demo in pod liveness-demo_default
 ```
+
+> **`BackOff` 이벤트**: 재시작이 반복되면 Kubernetes가 10s → 20s → 40s 식으로 대기 시간을 늘립니다.  
+> `kubectl get pod liveness-demo`으로 확인하면 `CrashLoopBackOff` 상태가 보입니다.
 
 ### ✅ 배운 것
 
 - `RESTARTS` 카운트로 재시작 이력 확인 가능
-- `Events` 섹션에서 실패 이유 확인
-- Probe 실패 후 재시작까지 `failureThreshold × periodSeconds` 초 소요
-- 재시작 후에도 Service는 계속 동작 (다른 Pod이 있다면)
+- `Events` 섹션에서 실제 에러 메시지 확인: `cat: can't open '/tmp/healthy'`
+- Probe 실패 후 재시작까지 `failureThreshold × periodSeconds` = **15초** 소요
+- 재시작 이후도 시작 30초 후 또 실패 → **`CrashLoopBackOff`** 진입 (정상 동작)
+- Service는 다른 Pod이 있다면 중단 없이 계속 동작
 
 ---
 
