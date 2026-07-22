@@ -323,18 +323,16 @@ curl http://$MINIKUBE_IP:30080
 
 ### 5️⃣ 실제 AKS 클러스터에서 테스트
 
+**방법 1: 클러스터 내부에서 테스트 (가장 간단)**
+
 ```bash
-# 노드의 INTERNAL-IP로 port-forward 테스트
+# 노드 IP 확인
 NODE_IP=$(kubectl get nodes -o jsonpath='{.items[0].status.addresses[?(@.type=="InternalIP")].address}')
 echo "Node Internal IP: $NODE_IP"
 
-# 클러스터 내부에서는 접근 가능
+# 클러스터 내부 Pod에서 NodePort로 접근
 kubectl run curl-test --image=curlimages/curl --rm -it --restart=Never -- \
   curl http://$NODE_IP:30080
-
-# 클러스터 외부에서 접근하려면 kubectl port-forward 사용
-kubectl port-forward node/$(kubectl get nodes -o jsonpath='{.items[0].metadata.name}') 30080:30080 &
-# 로컬에서 curl http://localhost:30080
 ```
 
 **기대 결과:**
@@ -343,6 +341,59 @@ kubectl port-forward node/$(kubectl get nodes -o jsonpath='{.items[0].metadata.n
 <html>
 <head>
 <title>Welcome to nginx!</title>
+<body>
+<h1>Welcome to nginx!</h1>
+</body>
+</html>
+```
+
+**방법 2: kubectl port-forward를 Service에 사용 (권장)**
+
+```bash
+# ClusterIP Service로 port-forward 설정
+kubectl port-forward svc/web-service-nodeport 8080:80 &
+
+# 로컬에서 접근
+curl http://localhost:8080
+
+# 백그라운드 프로세스 중지
+jobs
+kill %1  # 또는 fg 후 Ctrl+C
+```
+
+**기대 결과:**
+```
+Forwarding from 127.0.0.1:8080 -> 80
+Forwarding from [::1]:8080 -> 80
+
+<!DOCTYPE html>
+<html>
+...
+```
+
+**방법 3: LoadBalancer Service 사용 (프로덕션)**
+
+```bash
+# LoadBalancer로 변경 (기존 NodePort를 다시 배포하거나 수정)
+kubectl patch svc web-service-nodeport -p '{"spec":{"type":"LoadBalancer"}}'
+
+# 공개 IP 확인 (AKS에서 자동 할당)
+kubectl get svc web-service-nodeport --watch
+
+# 공개 IP로 접근
+LOAD_BALANCER_IP=$(kubectl get svc web-service-nodeport -o jsonpath='{.status.loadBalancer.ingress[0].ip}')
+curl http://$LOAD_BALANCER_IP
+```
+
+**기대 결과:**
+```bash
+$ kubectl get svc web-service-nodeport
+NAME                    TYPE           CLUSTER-IP      EXTERNAL-IP     PORT(S)
+web-service-nodeport    LoadBalancer   10.0.234.56     20.123.45.67    80:30080/TCP
+
+$ curl http://20.123.45.67
+<!DOCTYPE html>
+<html>
 ...
 ```
 
