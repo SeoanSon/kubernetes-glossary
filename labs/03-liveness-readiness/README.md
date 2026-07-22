@@ -64,20 +64,51 @@ Readiness 실패:
 
 ### 개념
 
-앱이 **살아있는지** 주기적으로 HTTP 요청을 보냅니다.  
+앱이 **살아있는지** 주기적으로 파일 존재 여부를 확인합니다.  
 실패하면 Kubernetes가 Pod를 **재시작**합니다.
 
-### YAML 설명 (`liveness.yaml`)
+> **참고**: 실제 운영에서는 `httpGet`으로 `/health` 엔드포인트를 체크하지만, 이 실습에서는  
+> HTTP 서버 없이도 바로 실행할 수 있도록 `exec` 방식(파일 존재 확인)을 사용합니다.
+
+### 완전한 배포 YAML (`liveness.yaml`)
 
 ```yaml
-livenessProbe:
-  httpGet:
-    path: /health         # GET /health 요청
-    port: 8080
-  initialDelaySeconds: 5  # 시작 후 5초 대기 (앱 초기화 시간)
-  periodSeconds: 5        # 5초마다 체크
-  failureThreshold: 3     # 3회 연속 실패 시 재시작
-  successThreshold: 1     # 1회 성공 시 정상으로 판단
+apiVersion: v1
+kind: Pod
+metadata:
+  name: liveness-demo
+  labels:
+    app: liveness-demo
+spec:
+  containers:
+  - name: liveness-demo
+    image: busybox:1.35
+    # 시작 후 30초까지는 /tmp/healthy 파일 유지 (정상 상태)
+    # 30초 뒤 파일 삭제 → Liveness Probe 실패 → Pod 재시작 시뮬레이션
+    command:
+    - /bin/sh
+    - -c
+    - |
+      touch /tmp/healthy
+      echo "Started. Will fail after 30 seconds..."
+      (sleep 30 && rm -f /tmp/healthy && echo ">>> FAIL: /tmp/healthy removed") &
+      while true; do sleep 5; done
+    livenessProbe:
+      exec:                       # /tmp/healthy 파일 존재 여부로 생존 판단
+        command:
+        - cat
+        - /tmp/healthy
+      initialDelaySeconds: 5      # 시작 후 5초 대기
+      periodSeconds: 5            # 5초마다 체크
+      failureThreshold: 3         # 3회 연속 실패 시 재시작 (= 15초 후)
+      successThreshold: 1         # 1회 성공 시 정상 판단
+    resources:
+      requests:
+        memory: "32Mi"
+        cpu: "50m"
+      limits:
+        memory: "64Mi"
+        cpu: "100m"
 ```
 
 ### 실습 시작
@@ -86,17 +117,18 @@ livenessProbe:
 # 1. Liveness Probe Pod 배포
 kubectl apply -f liveness.yaml
 
-# 2. Pod 상태 확인
+# 2. Pod 상태 실시간 확인 (RESTARTS 카운트 증가 확인)
 kubectl get pod liveness-demo -w
 ```
 
 ### 고의 실패 시뮬레이션
 
-이 실습의 컨테이너는 **시작 30초 후 /health 엔드포인트가 500 에러를 반환**합니다.
+이 컨테이너는 **시작 30초 후 `/tmp/healthy` 파일을 스스로 삭제**합니다.  
+Liveness Probe가 `cat /tmp/healthy` 실패 → 3회 연속 실패 → Pod 재시작.
 
 ```bash
-# Pod 이벤트 실시간 관찰 (새 터미널)
-kubectl get events --field-selector=involvedObject.name=liveness-demo -w
+# Pod 이벤트 실시간 관찰 (새 터미널에서 실행)
+kubectl get events --field-selector=involvedObject.name=liveness-demo --sort-by='.lastTimestamp' -w
 
 # Probe 상세 정보 확인
 kubectl describe pod liveness-demo
@@ -126,8 +158,8 @@ Events:
   Normal   Pulled     45s   kubelet            Successfully pulled image
   Normal   Created    45s   kubelet            Created container liveness-demo
   Normal   Started    45s   kubelet            Started container liveness-demo
-  Warning  Unhealthy  15s   kubelet            Liveness probe failed: HTTP probe failed
-                                               with statuscode: 500
+  Warning  Unhealthy  15s   kubelet            Liveness probe failed: command
+                                               "cat /tmp/healthy" returned non-zero: 1
   Normal   Killing    12s   kubelet            Container liveness-demo failed liveness
                                                probe, will be restarted
   Normal   Pulled     10s   kubelet            Successfully pulled image (재시작!)
@@ -149,17 +181,54 @@ Events:
 앱이 **요청을 받을 준비**가 됐는지 확인합니다.  
 실패하면 Service Endpoint에서 **제거** (트래픽 차단), Pod는 살아있습니다.
 
-### YAML 설명 (`readiness.yaml`)
+### 완전한 배포 YAML (`readiness.yaml`)
 
 ```yaml
-readinessProbe:
-  httpGet:
-    path: /ready          # GET /ready 요청
-    port: 8080
-  initialDelaySeconds: 5  # 초기 대기
-  periodSeconds: 5        # 5초마다 체크
-  failureThreshold: 3     # 3회 연속 실패 시 Endpoint에서 제거
-  successThreshold: 2     # 2회 연속 성공 시 Endpoint 복구
+apiVersion: v1
+kind: Pod
+metadata:
+  name: readiness-demo
+  labels:
+    app: readiness-demo
+spec:
+  containers:
+  - name: readiness-demo
+    image: busybox:1.35
+    command:
+    - /bin/sh
+    - -c
+    - |
+      touch /tmp/ready
+      echo "Ready. To simulate NOT READY:"
+      echo "  kubectl exec readiness-demo -- rm /tmp/ready"
+      while true; do sleep 10; done
+    readinessProbe:
+      exec:                       # /tmp/ready 파일 존재 여부로 준비 상태 판단
+        command:
+        - cat
+        - /tmp/ready
+      initialDelaySeconds: 5      # 시작 후 5초 대기
+      periodSeconds: 5            # 5초마다 체크
+      failureThreshold: 3         # 3회 연속 실패 시 Endpoint에서 제거
+      successThreshold: 2         # 2회 연속 성공 시 Endpoint 복구
+    resources:
+      requests:
+        memory: "32Mi"
+        cpu: "50m"
+      limits:
+        memory: "64Mi"
+        cpu: "100m"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: readiness-demo-svc
+spec:
+  selector:
+    app: readiness-demo
+  ports:
+  - port: 80
+    targetPort: 80
 ```
 
 ### 실습 시작
@@ -176,8 +245,8 @@ kubectl get endpoints readiness-demo-svc
 ### 준비 안 된 상태 강제로 만들기
 
 ```bash
-# Pod 내부에서 /tmp/ready 파일 삭제 (준비 안 된 상태로 전환)
-kubectl exec <pod-name> -- rm /tmp/ready
+# /tmp/ready 파일 삭제 (준비 안 된 상태로 전환)
+kubectl exec readiness-demo -- rm /tmp/ready
 
 # Endpoint에서 사라지는지 확인 (약 15초 후)
 kubectl get endpoints readiness-demo-svc -w
@@ -186,8 +255,8 @@ kubectl get endpoints readiness-demo-svc -w
 ### 복구 시뮬레이션
 
 ```bash
-# 다시 /tmp/ready 파일 생성 (준비 완료 상태로 전환)
-kubectl exec <pod-name> -- touch /tmp/ready
+# /tmp/ready 파일 재생성 (준비 완료 상태로 전환)
+kubectl exec readiness-demo -- touch /tmp/ready
 
 # Endpoint 복구 확인
 kubectl get endpoints readiness-demo-svc -w
@@ -197,16 +266,17 @@ kubectl get endpoints readiness-demo-svc -w
 
 ```
 # 초기 상태 (준비됨):
-NAME                  ENDPOINTS          AGE
-readiness-demo-svc    10.244.1.5:8080    30s
+NAME                  ENDPOINTS        AGE
+readiness-demo-svc    10.244.1.5:80    30s
 
-# /tmp/ready 삭제 후 (준비 안 됨):
-NAME                  ENDPOINTS          AGE
-readiness-demo-svc    <none>             45s   ← Endpoint 제거!
+# rm /tmp/ready 후 (준비 안 됨):
+NAME                  ENDPOINTS        AGE
+readiness-demo-svc    <none>           45s   ← Endpoint 제거!
 
-# /tmp/ready 재생성 후 (복구됨):
-NAME                  ENDPOINTS          AGE
-readiness-demo-svc    10.244.1.5:8080    60s   ← Endpoint 복구!
+# touch /tmp/ready 후 (복구):
+NAME                  ENDPOINTS        AGE
+readiness-demo-svc    10.244.1.5:80    60s   ← Endpoint 복구!
+```
 ```
 
 ### `kubectl describe` 출력 확인
