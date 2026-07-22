@@ -599,8 +599,9 @@ Warnings:         <none>
 
 1. **Deployment 숙달** → 실제 프로젝트에 적용
 2. **Probe 직접 실습** → [labs/03-liveness-readiness/](../labs/03-liveness-readiness/README.md) 로 이동
-3. **Service 이해** → [네트워킹](03-networking.md)
-4. **저장소 연결** → [저장소](04-storage.md)
+3. **Service 이해** → [Service 타입별 실습 03-1](../labs/03-service/README.md)로 이동
+4. **고급 네트워킹** → [네트워킹 심화](03-networking.md)
+5. **저장소 연결** → [저장소](04-storage.md)
 
 ---
 

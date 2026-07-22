@@ -166,12 +166,30 @@ kubectl exec pod-name -- env | grep NGINX
 
 ## 🧪 직접 실습해보기
 
-**클러스터에서 실제로 배포하고 테스트해보세요:**
+### 1️⃣ Service 타입 비교 (기초 - 필독!)
 
-→ [**실습 04: Kubernetes 네트워킹**](../labs/04-networking/README.md)
-- ✅ ClusterIP Service 배포 및 내부 통신
-- ✅ NodePort Service로 외부 접근
-- ✅ DNS 서비스 발견 테스트
+**ClusterIP, NodePort, LoadBalancer를 파일 단위로 분리해서 배우세요:**
+
+→ [**실습 03-1: Kubernetes Service 타입**](../labs/03-service/README.md)
+- ✅ Deployment 배포 (재사용 가능)
+- ✅ ClusterIP Service (클러스터 내부 통신)
+- ✅ NodePort Service (노드 포트 접근)
+- ✅ LoadBalancer Service (외부 IP 노출)
+- ✅ Service 타입별 접근 방법 및 DNS 테스트
+- ✅ 실제 운영 환경처럼 파일 분리 구성
+
+**추천 순서:**
+```
+Deployment 배포 → ClusterIP 테스트 → NodePort 테스트 → LoadBalancer 테스트
+```
+
+### 2️⃣ 네트워킹 심화
+
+**Ingress, DNS, NetworkPolicy 등 고급 주제:**
+
+→ [**실습 04: Kubernetes 네트워킹 (심화)**](../labs/04-networking/README.md)
+- ✅ 여러 Service 간 통신
+- ✅ DNS 서비스 발견 (FQDN)
 - ✅ 실제 kubectl 명령어와 결과
 
 ---

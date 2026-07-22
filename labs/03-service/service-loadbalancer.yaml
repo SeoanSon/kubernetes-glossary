@@ -1,0 +1,19 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: web-server-loadbalancer
+  namespace: default
+  labels:
+    app: web-server
+spec:
+  type: LoadBalancer
+  ports:
+  - name: http
+    port: 80
+    targetPort: http
+    protocol: TCP
+  selector:
+    app: web-server
+    tier: backend
+  # 선택사항: 특정 IP 지정 (클라우드 환경에서만 작동)
+  # loadBalancerIP: "203.0.113.1"
