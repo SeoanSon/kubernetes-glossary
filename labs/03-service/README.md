@@ -152,6 +152,111 @@ Endpoints:                10.244.1.5:80,10.244.1.6:80,10.244.2.7:80
 
 ---
 
+## 🔧 AKS 환경에서 NodePort 테스트하기
+
+AKS 환경에서는 노드에 EXTERNAL-IP가 없어서 직접 접근이 어렵습니다:
+
+```bash
+$ kubectl get nodes -o wide
+NAME                                STATUS   ROLES    AGE    VERSION   INTERNAL-IP   EXTERNAL-IP
+aks-agentpool-36284107-vmss00000a   Ready    <none>   13h    v1.35.5   10.224.0.7    <none>
+aks-agentpool-36284107-vmss00000b   Ready    <none>   13h    v1.35.5   10.224.0.4    <none>
+```
+
+### 방법 1️⃣: kubectl port-forward (모든 환경)
+
+**가장 간단하고 모든 환경에서 작동:**
+
+```bash
+# 1. Service로 port-forward 설정 (로컬 8080 → Service 80)
+kubectl port-forward service/web-server-nodeport 8080:80 &
+
+# 2. 로컬에서 접근
+curl http://localhost:8080
+
+# 3. 백그라운드 작업 종료
+jobs
+kill %1
+```
+
+**기대 결과:**
+```bash
+$ kubectl port-forward service/web-server-nodeport 8080:80 &
+[1] 12345
+Forwarding from 127.0.0.1:8080 -> 80
+Forwarding from [::1]:8080 -> 80
+
+$ curl http://localhost:8080
+<!DOCTYPE html>
+<html>
+<head>
+<title>Welcome to nginx!</title>
+```
+
+### 방법 2️⃣: Pod 내부에서 테스트
+
+**클러스터 내부의 다른 Pod에서 테스트:**
+
+```bash
+# 1. 테스트용 Pod 실행
+kubectl run test-curl --image=curlimages/curl -it --rm -- \
+  curl http://web-server-nodeport:80
+
+# 2. 또는 기존 Pod에서 직접 실행
+kubectl exec -it web-server-abc123-xyz1 -- curl http://web-server-nodeport:80
+```
+
+**기대 결과:**
+```bash
+$ kubectl run test-curl --image=curlimages/curl -it --rm -- \
+  curl http://web-server-nodeport:80
+<!DOCTYPE html>
+<html>
+<head>
+<title>Welcome to nginx!</title>
+...
+pod "test-curl" deleted
+```
+
+### 방법 3️⃣: AKS 노드에 직접 접근 (SSH)
+
+**특정 AKS 노드에 SSH로 접근해서 테스트:**
+
+```bash
+# 1. Azure에서 노드에 접근하는 방법 설정
+# (별도의 VM이나 Bastion 필요 - 보안상 제한)
+
+# 2. kubectl debug를 사용한 노드 디버깅 Pod
+kubectl debug node/aks-agentpool-36284107-vmss00000a -it --image=ubuntu
+
+# 3. 디버그 Pod 내부에서
+curl http://10.224.0.7:30080
+```
+
+### 방법 4️⃣: Azure Load Balancer 활용
+
+**AKS에서 NodePort를 외부에 노출하려면 (프로덕션):**
+
+```yaml
+# LoadBalancer Service 사용 (권장)
+# 또는 Ingress Controller 사용
+```
+
+---
+
+## 📊 환경별 테스트 방법 비교
+
+| 방법 | 로컬 | Docker Desktop | AKS | EKS | GKE |
+|------|------|---|---|---|---|
+| **직접 IP 접근** | ✅ | ✅ | ❌ | ❌ | ❌ |
+| **port-forward** | ✅ | ✅ | ✅ | ✅ | ✅ |
+| **Pod에서 테스트** | ✅ | ✅ | ✅ | ✅ | ✅ |
+| **LoadBalancer** | ⚠️ | ⚠️ | ✅ | ✅ | ✅ |
+
+**결론**: AKS에서는 **port-forward** 또는 **Pod 내부 테스트** 추천!
+
+---
+
 ## 🔴 Step 4: LoadBalancer Service (로드밸런서)
 
 **사용 시나리오**: 프로덕션 환경, 외부 IP 필요
@@ -175,37 +280,56 @@ curl http://$EXTERNAL_IP
 kubectl exec -it web-server-abc123-xyz1 -- curl http://web-server-loadbalancer
 ```
 
-**기대 결과 (클라우드 환경 - AKS, GKE, EKS):**
-```bash
-$ kubectl get service web-server-loadbalancer
-NAME                       TYPE           CLUSTER-IP     EXTERNAL-IP      PORT(S)        AGE
-web-server-loadbalancer    LoadBalancer   10.0.345.678   203.0.113.100    80:30123/TCP   10s
+### AKS 환경에서의 LoadBalancer
 
-$ kubectl describe service web-server-loadbalancer
-Name:                     web-server-loadbalancer
-Type:                     LoadBalancer
-IP:                       10.0.345.678
-LoadBalancer Ingress:     203.0.113.100
-Port:                     http  80/TCP
-TargetPort:               http/TCP
-NodePort:                 http  30123/TCP
-Endpoints:                10.244.1.5:80,10.244.1.6:80,10.244.2.7:80
+**AKS에서 LoadBalancer를 배포하면 Azure Load Balancer가 자동으로 생성됩니다:**
+
+```bash
+$ kubectl get svc web-server-loadbalancer
+NAME                       TYPE           CLUSTER-IP     EXTERNAL-IP      PORT(S)        AGE
+web-server-loadbalancer    LoadBalancer   10.0.345.678   40.71.123.100    80:30567/TCP   15s
+
+# EXTERNAL-IP에 실제 Azure Load Balancer의 공개 IP가 할당됨!
+
+$ curl http://40.71.123.100
+<!DOCTYPE html>
+<html>
+<head>
+<title>Welcome to nginx!</title>
 ```
 
-**로컬 테스트 환경에서:**
+**또는 DNS 이름으로도 접근 가능:**
+
+```bash
+$ kubectl describe svc web-server-loadbalancer
+...
+LoadBalancer Ingress:     40.71.123.100
+...
+
+# Azure가 자동으로 생성한 DNS 이름
+# <service-name>.eastus.cloudapp.azure.com 형식
+```
+
+### 로컬 테스트 환경에서:
+
 ```bash
 $ kubectl get service web-server-loadbalancer
 NAME                       TYPE           CLUSTER-IP     EXTERNAL-IP   PORT(S)        AGE
 web-server-loadbalancer    LoadBalancer   10.0.345.678   <pending>     80:30123/TCP   10s
 # EXTERNAL-IP가 <pending> 상태 (로컬 환경에서는 할당 안됨)
-# 하지만 NodePort (30123)로는 여전히 접근 가능
+
+# port-forward로 테스트
+kubectl port-forward service/web-server-loadbalancer 8080:80
+curl http://localhost:8080
 ```
 
 **LoadBalancer의 특징:**
-- ✅ 클라우드 환경에서 실제 로드밸런서 IP 할당
+- ✅ 클라우드 환경에서 실제 로드밸런서 IP 할당 (공개 IP)
 - ✅ NodePort도 함께 생성됨
 - ✅ ClusterIP도 함께 생성됨
-- ✅ 가장 완전한 외부 노출 방식
+- ✅ 프로덕션 환경에서 외부 노출의 표준
+- ✅ AKS의 경우 Azure Load Balancer 자동 생성
+- ✅ 비용 발생 (클라우드 제공자별로 청구)
 
 ---
 
@@ -270,13 +394,53 @@ web-server-loadbalancer    10.244.1.5:80,10.244.1.6:80,10.244.2.7:80        1m
 
 2️⃣ 개발/테스트 환경에서 외부 접근 필요 → NodePort 사용
    (예: 로컬에서 http://localhost:30080)
+   또는 port-forward 사용 (모든 환경)
 
 3️⃣ 프로덕션 환경 외부 노출 → LoadBalancer 사용
    (예: 실제 도메인, HTTPS, 트래픽 분산)
+   - AKS: Azure Load Balancer 자동 생성
+   - EKS: AWS Network Load Balancer / Application Load Balancer
+   - GKE: Google Cloud Load Balancer
 
 4️⃣ 고급: Ingress 컨트롤러 → 여러 Service를 하나의 IP로 관리
    (예: web.example.com → Service A, api.example.com → Service B)
 ```
+
+### AKS 환경에서의 주의사항
+
+**NodePort 테스트 시:**
+```bash
+# ❌ EXTERNAL-IP가 없으면 직접 접근 불가
+kubectl get nodes -o wide
+# EXTERNAL-IP 컬럼이 <none>
+
+# ✅ 대신 이 방법들 사용:
+# 1. port-forward (권장)
+kubectl port-forward svc/web-server-nodeport 8080:80
+
+# 2. Pod 내부에서 테스트
+kubectl run test --image=curlimages/curl -it --rm -- curl http://web-server-nodeport
+
+# 3. kubectl debug (노드 접근)
+kubectl debug node/<node-name> -it --image=ubuntu
+```
+
+**LoadBalancer 배포 시:**
+```bash
+# AKS에서는 자동으로 Azure Load Balancer 생성
+# 비용이 발생하므로 주의!
+
+kubectl apply -f service-loadbalancer.yaml
+
+# 공개 IP 확인
+kubectl get svc web-server-loadbalancer
+
+# 생성된 Azure 리소스 확인
+az network lb list -o table
+az network public-ip list -o table
+```
+
+---
 
 ### Service 디버깅
 
