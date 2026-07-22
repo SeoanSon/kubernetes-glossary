@@ -187,6 +187,7 @@
 - [관찰성](docs/07-observability.md) - Logs, Metrics, Events
 - [고급 주제](docs/08-advanced.md) - CRD, Operator, Webhook
 - [트러블슈팅](docs/09-troubleshooting.md) - 디버깅, 문제 해결
+- [K8s vs AKS](docs/10-kubernetes-vs-aks.md) - 차이점 비교 및 선택 가이드
 
 ---
 

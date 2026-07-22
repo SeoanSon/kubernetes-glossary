@@ -25,8 +25,9 @@ Kubernetes를 배우면서 마주치는 수백 개의 용어와 개념을 체계
 | 7️⃣ | **관찰성** - Logs, Metrics, Events | 2-2.5시간 | ⭐⭐⭐ 중급 |
 | 8️⃣ | **고급** - Operators, CRD, Webhooks | 3-4시간 | ⭐⭐⭐⭐ 고급 |
 | 9️⃣ | **트러블슈팅** - 디버깅, 일반 문제 | 2-3시간 | ⭐⭐⭐ 중급 |
+| 🔟 | **K8s vs AKS** - Azure 통합 이해 | 1.5-2시간 | ⭐⭐⭐ 중급 |
 
-**총 학습 시간: ~18-24시간**
+**총 학습 시간: ~21-28시간**
 
 ## 🚀 빠른 시작
 
@@ -44,6 +45,7 @@ open docs/01-core-concepts.md
 # 관심 있는 주제로 이동
 open docs/03-networking.md      # Networking
 open docs/05-security-rbac.md   # RBAC & 보안
+open docs/10-kubernetes-vs-aks.md  # K8s vs AKS 차이점
 ```
 
 ### 3️⃣ 실제 예제 YAML 확인
@@ -128,6 +130,15 @@ open diagrams/service-discovery.md
   - Network 문제 해결
   - Resource 관련 문제
   - 일반적인 실수와 해결책
+
+### Kubernetes vs AKS (Level 3: 중급)
+- [10-kubernetes-vs-aks.md](docs/10-kubernetes-vs-aks.md)
+  - 순수 K8s vs 관리형 AKS 차이
+  - 네트워킹 비교 (CNI, Service Discovery)
+  - 저장소 비교 (Volume, StorageClass)
+  - 보안 & RBAC 비교 (Entra ID 통합)
+  - 모니터링 비교 (Container Insights)
+  - 선택 가이드 & 마이그레이션
 
 ## 📇 전체 용어 색인
 
