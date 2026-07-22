@@ -10,10 +10,28 @@
   - [고급 주제에서 자세히 보기](docs/08-advanced.md)
 - **Affinity** - Pod 배치 정책 (NodeAffinity, PodAffinity)
   - [워크로드에서 자세히 보기](docs/02-workloads.md)
+- **AGIC (Application Gateway Ingress Controller)** - ⭐ AKS 고유: Azure Application Gateway 기반 Ingress
+  - Azure의 관리형 Application Gateway와 통합하여 L7 라우팅 제공
+  - [K8s vs AKS에서 자세히 보기](docs/10-kubernetes-vs-aks.md)
 - **API Server** - Kubernetes의 중앙 제어 평면 (etcd와 통신)
   - [핵심 개념에서 자세히 보기](docs/01-core-concepts.md)
 - **API Version** - 리소스의 API 버전 (v1, apps/v1 등)
   - [핵심 개념에서 자세히 보기](docs/01-core-concepts.md)
+- **Azure CNI** - ⭐ AKS 고유: Azure Virtual Network 네트워크 플러그인
+  - Pod가 VNet IP를 직접 사용 (가상 IP 아님), 더 나은 성능과 VNet 기능 제공
+  - 대안: Kubenet, Cilium
+  - [K8s vs AKS에서 자세히 보기](docs/10-kubernetes-vs-aks.md)
+- **Azure Disk** - ⭐ AKS 고유: Azure Managed Disk 기반 StorageClass
+  - Pod의 영구 저장소 제공 (Premium SSD, Standard HDD)
+  - `managed-csi` StorageClass로 자동 프로비저닝
+  - [저장소에서 자세히 보기](docs/04-storage.md)
+- **Azure Files** - ⭐ AKS 고유: Azure File Share 기반 볼륨
+  - 여러 Pod 간 공유 저장소 (SMB/NFS)
+  - `azurefile-csi` CSI 드라이버로 지원
+  - [저장소에서 자세히 보기](docs/04-storage.md)
+- **Azure Policy** - ⭐ AKS 고유: Kubernetes 정책 준수 관리
+  - 클러스터의 정책 위반 감시 및 거부
+  - [K8s vs AKS에서 자세히 보기](docs/10-kubernetes-vs-aks.md)
 
 ## B
 - **Binding** - Service가 Endpoint를 선택
@@ -26,10 +44,15 @@
   - [설정 관리에서 자세히 보기](docs/06-configuration.md)
 - **Container** - 애플리케이션 실행 단위 (Docker, containerd 등)
   - [핵심 개념에서 자세히 보기](docs/01-core-concepts.md)
+- **Container Insights** - ⭐ AKS 고유: Azure의 모니터링 솔루션
+  - Pod/Node 메트릭, 로그, 성능 분석을 Azure Portal에서 통합 제공
+  - Prometheus/Grafana 대신 사용 가능
+  - [K8s vs AKS에서 자세히 보기](docs/10-kubernetes-vs-aks.md)
 - **Container Registry** - 컨테이너 이미지 저장소 (Docker Hub, ECR, ACR)
   - [핵심 개념에서 자세히 보기](docs/01-core-concepts.md)
 - **Control Plane** - Kubernetes 제어 시스템 (API Server, Scheduler, Controller Manager)
-  - [핵심 개념에서 자세히 보기](docs/01-core-concepts.md)
+  - 순수 K8s: 직접 관리 / AKS: Microsoft가 관리 ⭐ (차이점)
+  - [K8s vs AKS에서 자세히 보기](docs/10-kubernetes-vs-aks.md)
 - **Controller** - 현재 상태를 원하는 상태로 조정하는 루프
   - [핵심 개념에서 자세히 보기](docs/01-core-concepts.md)
 - **CRD (Custom Resource Definition)** - 커스텀 리소스 정의
@@ -46,6 +69,10 @@
 ## E
 - **Endpoint** - Service가 트래픽을 보낼 수 있는 주소 목록
   - [네트워킹에서 자세히 보기](docs/03-networking.md)
+- **Entra ID** - ⭐ AKS 고유: Microsoft Azure Active Directory 통합
+  - AKS에서 pod 인증, kubectl 접근, RBAC를 Entra ID와 연동
+  - 순수 K8s는 kubeconfig 기반 인증
+  - [K8s vs AKS에서 자세히 보기](docs/10-kubernetes-vs-aks.md)
 - **etcd** - Kubernetes 상태 저장 (key-value store)
   - [핵심 개념에서 자세히 보기](docs/01-core-concepts.md)
 
@@ -56,9 +83,17 @@
 ## G
 - **Garbage Collection** - 미아 Pod/리소스 자동 삭제
   - [핵심 개념에서 자세히 보기](docs/01-core-concepts.md)
+- **Gatekeeper** - ⭐ AKS 고유: 기본 namespace에 설치되는 정책 엔진
+  - OPA (Open Policy Agent) 기반으로 kubernetes 정책 검증
+  - Pod, Service 등의 리소스 생성/수정 시 정책 위반 체크
+  - Azure Policy와 연동되어 정책 위반 시 리소스 거부 또는 감시
+  - 예: 특정 이미지 레지스트리만 허용, 리소스 제한 의무화
+  - `gatekeeper-system` namespace에서 실행
+  - [K8s vs AKS에서 자세히 보기](docs/10-kubernetes-vs-aks.md)
 
 ## H
-- **HealthCheck** - Pod 상태 확인 (Liveness, Readiness, Startup Probe)
+- **AKS: AGIC (Application Gateway Ingress Controller) 옵션도 있음
+  - HealthCheck** - Pod 상태 확인 (Liveness, Readiness, Startup Probe)
   - [워크로드에서 자세히 보기](docs/02-workloads.md)
 
 ## I
@@ -90,6 +125,10 @@
 ## M
 - **Manifest** - Kubernetes 리소스 정의 (YAML/JSON)
   - [핵심 개념에서 자세히 보기](docs/01-core-concepts.md)
+- **Managed Disk** - ⭐ AKS 고유: Azure에서 관리하는 디스크
+  - Pod의 PersistentVolume으로 사용되는 Azure Managed Disk
+  - Premium (SSD) / Standard (HDD) 옵션 제공
+  - [저장소에서 자세히 보기](docs/04-storage.md)
 - **Metrics Server** - Pod/Node 리소스 사용량 수집
   - [관찰성에서 자세히 보기](docs/07-observability.md)
 
