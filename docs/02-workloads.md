@@ -454,8 +454,9 @@ spec:
 ## 📌 다음 단계
 
 1. **Deployment 숙달** → 실제 프로젝트에 적용
-2. **Service 이해** → [네트워킹](03-networking.md)
-3. **저장소 연결** → [저장소](04-storage.md)
+2. **Probe 직접 실습** → [labs/03-liveness-readiness/](../labs/03-liveness-readiness/README.md) 로 이동
+3. **Service 이해** → [네트워킹](03-networking.md)
+4. **저장소 연결** → [저장소](04-storage.md)
 
 ---
 

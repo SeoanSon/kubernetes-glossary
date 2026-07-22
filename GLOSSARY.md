@@ -40,6 +40,10 @@
 ## C
 - **ClusterIP** - Service 타입: 내부 통신만 (기본값)
   - [네트워킹에서 자세히 보기](docs/03-networking.md)
+- **CronJob** - 주기적 배치 작업 (쳀 형식 스케줄)
+  - 신택: `schedule: "0 2 * * *"` (매일 새벽 2시)
+  - Job을 생성하고 완료 시 종료
+  - [워크로드에서 자세히 보기](docs/02-workloads.md)
 - **ConfigMap** - 환경 변수 및 설정 파일 저장
   - [설정 관리에서 자세히 보기](docs/06-configuration.md)
 - **Container** - 애플리케이션 실행 단위 (Docker, containerd 등)
@@ -117,9 +121,15 @@
 ## L
 - **Label** - 리소스 식별용 키-값 쌍
   - [핵심 개념에서 자세히 보기](docs/01-core-concepts.md)
-- **Liveness Probe** - Pod가 살아있는지 확인
-  - [워크로드에서 자세히 보기](docs/02-workloads.md)
+- **LimitRange** - Namespace별 기본/최대 리소스 추정 설정
+  - Container에 limits/requests를 지정 안 해도 자동 적용
+  - [보안 & RBAC에서 자세히 보기](docs/05-security-rbac.md)
+- **Liveness Probe** - Pod가 살아있는지 확인 → 실패 시 **Pod 재시작**
+  - HTTP GET, TCP, exec 세 가지 방식 지원
+  - `failureThreshold × periodSeconds` 이후 재시작
+  - [워크로드에서 자세히 보기](docs/02-workloads.md) | [실습](labs/03-liveness-readiness/README.md)
 - **LoadBalancer** - Service 타입: 클라우드 LB 사용
+  - AKS에서는 Azure Load Balancer 자동 할당
   - [네트워킹에서 자세히 보기](docs/03-networking.md)
 
 ## M
@@ -151,6 +161,10 @@
   - [저장소에서 자세히 보기](docs/04-storage.md)
 - **PersistentVolumeClaim (PVC)** - 저장소 요청 (사용자가 생성)
   - [저장소에서 자세히 보기](docs/04-storage.md)
+- **PDB (PodDisruptionBudget)** - 유지보수 중 최소 Pod 생존 보장
+  - `minAvailable: 2` 또는 `maxUnavailable: 1`로 설정
+  - 노드 업그레이드, 스케일 다운 시 서비스 중단 방지
+  - [워크로드에서 자세히 보기](docs/02-workloads.md)
 - **Pod** - Kubernetes 최소 배포 단위 ⭐ 핵심!
   - [핵심 개념에서 자세히 보기](docs/01-core-concepts.md)
 - **Pod Security Policy (PSP)** - Pod 보안 정책 (deprecated)
@@ -163,8 +177,10 @@
 ## R
 - **RBAC (Role-Based Access Control)** - 권한 제어
   - [보안 & RBAC에서 자세히 보기](docs/05-security-rbac.md)
-- **Readiness Probe** - Pod가 트래픽 받을 준비가 되었는지
-  - [워크로드에서 자세히 보기](docs/02-workloads.md)
+- **Readiness Probe** - Pod가 트래픽 받을 준비가 되었는지 → 실패 시 **Endpoint에서 제외** (Pod 유지)
+  - Liveness와 크게 다르는 점: Pod를 재시작하지 않음
+  - DB 연결 대기, 초기화 중 등 일시적 비활성화
+  - [워크로드에서 자세히 보기](docs/02-workloads.md) | [실습](labs/03-liveness-readiness/README.md)
 - **ReplicaSet** - 정해진 수의 Pod 복제본 유지
   - [워크로드에서 자세히 보기](docs/02-workloads.md)
 - **Resource Quota** - 네임스페이스별 리소스 사용 제한
@@ -173,6 +189,10 @@
 ## S
 - **Scheduler** - Pod를 노드에 배치하는 제어 평면
   - [핵심 개념에서 자세히 보기](docs/01-core-concepts.md)
+- **Startup Probe** - 느린 앱 시작 시간 보장 Probe
+  - Startup 성공 전당은 Liveness/Readiness Probe가 동작하지 않음
+  - JVM, 레거시 앱에서 유용 (`failureThreshold: 30, periodSeconds: 10` 시 5분 대기)
+  - [워크로드에서 자세히 보기](docs/02-workloads.md)
 - **Secret** - 민감 정보 저장 (암호, 토큰, 인증서)
   - [설정 관리에서 자세히 보기](docs/06-configuration.md)
 - **SecurityContext** - Pod/Container 보안 설정
@@ -211,7 +231,10 @@
 - (없음)
 
 ## Z
-- (없음)
+- **Zero-downtime Deployment** - 무중단 배포 패턴
+  - Deployment RollingUpdate + Readiness Probe 조합으로 달성
+  - `maxUnavailable: 0` 설정 필수
+  - [워크로드에서 자세히 보기](docs/02-workloads.md)
 
 ---
 
@@ -227,6 +250,10 @@
 - [고급 주제](docs/08-advanced.md) - CRD, Operator, Webhook
 - [트러블슈팅](docs/09-troubleshooting.md) - 디버깅, 문제 해결
 - [K8s vs AKS](docs/10-kubernetes-vs-aks.md) - 차이점 비교 및 선택 가이드
+
+## 🧪 실습 (Labs)
+
+- [labs/03-liveness-readiness/](labs/03-liveness-readiness/README.md) - Liveness & Readiness Probe 직접 실습
 
 ---
 

@@ -48,6 +48,16 @@ open docs/05-security-rbac.md   # RBAC & 보안
 open docs/10-kubernetes-vs-aks.md  # K8s vs AKS 차이점
 ```
 
+### 3️⃣ 직접 실습 (Labs)
+```bash
+# 개념을 실제 클러스터에서 실습
+open labs/README.md
+
+# Liveness & Readiness Probe 실습
+kubectl apply -f labs/03-liveness-readiness/liveness.yaml
+kubectl get pod liveness-demo -w
+```
+
 ### 3️⃣ 실제 예제 YAML 확인
 ```bash
 # 예제를 직접 클러스터에 적용:

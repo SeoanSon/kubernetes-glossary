@@ -1,0 +1,108 @@
+# Readiness Probe 실습 YAML
+#
+# 이 실습에는 Pod과 Service가 함께 배포됩니다.
+# /tmp/ready 파일이 있으면 준비됨, 없으면 준비 안 됨 상태입니다.
+#
+# 사용법:
+#   kubectl apply -f readiness.yaml
+#   kubectl get pod -l app=readiness-demo
+#   kubectl get endpoints readiness-demo-svc -w
+#
+#   # 준비 안 된 상태로 강제 전환
+#   PODNAME=$(kubectl get pod -l app=readiness-demo -o name)
+#   kubectl exec $PODNAME -- rm /tmp/ready
+#
+#   # Endpoint에서 사라지는지 확인 (약 15초 후)
+#   kubectl get endpoints readiness-demo-svc -w
+#
+#   # 다시 복구
+#   kubectl exec $PODNAME -- touch /tmp/ready
+#
+#   # 정리
+#   kubectl delete -f readiness.yaml
+
+apiVersion: v1
+kind: Pod
+metadata:
+  name: readiness-demo
+  labels:
+    app: readiness-demo
+spec:
+  containers:
+  - name: readiness-demo
+    image: busybox:1.35
+    command:
+    - /bin/sh
+    - -c
+    - |
+      # 초기 상태: 준비됨
+      touch /tmp/ready
+      echo "Pod started. /tmp/ready exists - READY"
+      echo ""
+      echo "To simulate NOT READY:"
+      echo "  kubectl exec readiness-demo -- rm /tmp/ready"
+      echo ""
+      echo "To recover:"
+      echo "  kubectl exec readiness-demo -- touch /tmp/ready"
+
+      # Pod을 계속 살아있게 유지
+      while true; do
+        if [ -f /tmp/ready ]; then
+          echo "[$(date)] Status: READY"
+        else
+          echo "[$(date)] Status: NOT READY (Endpoint에서 제거됨)"
+        fi
+        sleep 10
+      done
+    readinessProbe:
+      exec:                          # /tmp/ready 파일 존재 여부로 판단
+        command:
+        - cat
+        - /tmp/ready
+      initialDelaySeconds: 5         # 시작 후 5초 대기
+      periodSeconds: 5               # 5초마다 체크
+      failureThreshold: 3            # 3회 연속 실패 시 Endpoint에서 제거
+      successThreshold: 2            # 2회 연속 성공 시 Endpoint 복구
+    resources:
+      requests:
+        memory: "32Mi"
+        cpu: "50m"
+      limits:
+        memory: "64Mi"
+        cpu: "100m"
+
+---
+# Readiness Probe 동작 확인용 Service
+apiVersion: v1
+kind: Service
+metadata:
+  name: readiness-demo-svc
+spec:
+  selector:
+    app: readiness-demo
+  ports:
+  - port: 80
+    targetPort: 8080                 # 실제 앱은 8080 포트 사용 (이 예제에선 확인용)
+
+---
+# 📌 관찰 명령어:
+#
+# # Pod 상태 확인 (READY 컬럼: 0/1이면 Readiness 실패)
+# kubectl get pods -l app=readiness-demo -w
+#
+# # Endpoint 실시간 확인 (Readiness 실패 시 <none>이 됨)
+# kubectl get endpoints readiness-demo-svc -w
+#
+# # 상세 확인 (Conditions 섹션에서 Ready: False 확인)
+# kubectl describe pod readiness-demo
+#
+# # 이벤트 확인
+# kubectl get events --field-selector=involvedObject.name=readiness-demo
+#
+# 예상 Conditions 출력:
+# Conditions:
+#   Type              Status
+#   Initialized       True
+#   Ready             False    ← Readiness 실패 시
+#   ContainersReady   False
+#   PodScheduled      True
