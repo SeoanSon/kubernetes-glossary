@@ -316,12 +316,45 @@ kubectl apply -f service-loadbalancer.yaml
 kubectl get svc web-server-loadbalancer --watch
 
 # 3️⃣ 외부에서 접근
-curl http://<EXTERNAL-IP>
+EXTERNAL_IP=$(kubectl get svc web-server-loadbalancer -o jsonpath='{.status.loadBalancer.ingress[0].ip}')
+curl http://$EXTERNAL_IP
 ```
 
 **기대 결과:**
-```yaml
-# 또는 Ingress Controller 사용
+```bash
+$ kubectl apply -f deployment.yaml
+deployment.apps/web-server created
+
+$ kubectl apply -f service-loadbalancer.yaml
+service/web-server-loadbalancer created
+
+$ kubectl get svc web-server-loadbalancer --watch
+NAME                       TYPE           CLUSTER-IP     EXTERNAL-IP      PORT(S)        AGE
+web-server-loadbalancer    LoadBalancer   10.0.345.678   <pending>        80:30567/TCP   3s
+# 몇 초 후 Azure Load Balancer 공개 IP 할당됨
+web-server-loadbalancer    LoadBalancer   10.0.345.678   40.71.123.100    80:30567/TCP   15s
+
+$ EXTERNAL_IP=$(kubectl get svc web-server-loadbalancer -o jsonpath='{.status.loadBalancer.ingress[0].ip}')
+$ curl http://$EXTERNAL_IP
+<!DOCTYPE html>
+<html>
+<head>
+<title>Welcome to nginx!</title>
+...
+```
+
+**Azure 리소스 생성 확인:**
+```bash
+# Azure Load Balancer 확인
+az network lb list -o table
+
+# 공개 IP 확인
+az network public-ip list -o table
+
+# 결과:
+Name                                ResourceGroup  Location    AllocationMethod
+----------------------------------  -----------  ----------  ------------------
+kubernetes-40771234                 MC_rg_aks     eastus      Static
 ```
 
 ---
